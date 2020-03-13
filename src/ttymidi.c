@@ -72,7 +72,7 @@ int setup_serial_port (const char path[], int speed)
     struct termios2 tio;
     
     // open device for read
-    fd = open (path, O_RDONLY | O_NOCTTY);
+    fd = open (path, O_RDWR | O_NOCTTY | O_ASYNC);
     
     //if can't open file
     if (fd < 0)
@@ -86,7 +86,12 @@ int setup_serial_port (const char path[], int speed)
         perror("TCGETS2 ioctl");
     
     tio.c_cflag &= ~CBAUD;
-    tio.c_cflag |= BOTHER;
+    tio.c_cflag |= BOTHER | CS8 | CLOCAL | CREAD; // Baud rate, 8N1, local modem, receive chars
+	tio.c_iflag = IGNPAR; // ignore parity errors
+	tio.c_oflag = 0; //	raw output
+	tio.c_lflag = 0; // non-canonical
+	tio.c_cc[VTIME] = 0; // don't use inter-char timer
+	tio.c_cc[VMIN] = 1; // block read until 1 char arrives
     tio.c_ispeed = speed;
     tio.c_ospeed = speed;
     
@@ -262,6 +267,8 @@ int main (void)
     // open UART device file for read/write
     printf ("Opening %s...\n", SERIAL_PATH);
     serial = setup_serial_port (SERIAL_PATH, 31250);
+
+	if (PRINTONLY) printf ("Only printing serial messages.\n");
 
     // start main thread
     printf ("Starting read thread.\n");
