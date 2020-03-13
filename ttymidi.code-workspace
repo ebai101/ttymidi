@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"ioctl.h": "c",
+			"asoundlib.h": "c",
+			"fcntl.h": "c",
+			"termbits.h": "c"
+		}
+	}
+}
