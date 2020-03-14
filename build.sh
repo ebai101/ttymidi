@@ -10,4 +10,8 @@ case $1 in
         echo "make debug"
         ssh root@192.168.7.2 "make -C /root/ttymidi/ debug"
     ;;
+    alsa)
+        echo "make alsa"
+        ssh root@192.168.7.2 "make -C /root/ttymidi/ alsa"
+    ;;
 esac

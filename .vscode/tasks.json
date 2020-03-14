@@ -21,9 +21,10 @@
             "description": "select a build process",
             "options": [
               "all",
-              "debug"
+              "debug",
+              "alsa"
             ],
-            "default": "debug"
+            "default": "alsa"
         }, 
     ]
 }

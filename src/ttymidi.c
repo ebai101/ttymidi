@@ -37,13 +37,22 @@
 int serial;
 int port_out_id;
 
+void errormessage(const char *format, ...)
+{
+   	va_list ap;
+   	va_start(ap, format);
+   	vfprintf(stderr, format, ap);
+   	va_end(ap);
+   	putc('\n', stderr);
+}
+
 int open_seq (snd_seq_t** seq) 
 {
 	int port;
 
-	if (snd_seq_open(seq, "default", SND_SEQ_OPEN_INPUT, 0) < 0) 
+	if ((port = snd_seq_open(seq, "default", SND_SEQ_OPEN_INPUT, 0)) < 0) 
 	{
-		fprintf(stderr, "Error opening ALSA sequencer.\n");
+		errormessage ("Error opening ALSA sequencer: %s", snd_strerror(port));
 		exit(1);
 	}
 
@@ -53,7 +62,7 @@ int open_seq (snd_seq_t** seq)
 					SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ,
 					SND_SEQ_PORT_TYPE_APPLICATION)) < 0) 
 	{
-		fprintf(stderr, "Error creating sequencer port.\n");
+		errormessage("Error creating sequencer port: %s", snd_strerror(port));
 	}
 
 	return port;
@@ -201,10 +210,10 @@ void parse_midi_command (snd_seq_t* seq, int port_out_id, char *buf)
 	snd_seq_drain_output(seq);
 }
 
-void read_midi_from_serial_port (snd_seq_t* seq) 
+void read_midi_from_serial_port (snd_rawmidi_t *midiout) 
 {
-	char buf[3], msg[MAX_MSG_SIZE];
-	int i, msglen;
+	char buf[3];
+	int i, status;
 	
 	/* Lets first fast forward to first status byte... */
 	if (PRINTONLY) {
@@ -253,16 +262,26 @@ void read_midi_from_serial_port (snd_seq_t* seq)
             }
         }
 
-		parse_midi_command(seq, port_out_id, buf);
+		// write to hardware port
+		if ((status = snd_rawmidi_write (midiout, buf, 3)) < 0)
+			errormessage("Problem writing to MIDI output: %s", snd_strerror(status));
 	}
 }
 
 int main (void)   
 {
+	int status;
+	int mode = SND_RAWMIDI_SYNC;
+	const char* portname = "hw:1,1,0";
+
     // setup sequencer 
-    printf ("Setting up ALSA sequencer...\n");
-    snd_seq_t *seq;
-    port_out_id = open_seq (&seq);
+    printf ("Setting up MIDI...\n");
+    snd_rawmidi_t *midiout;
+    if ((status = snd_rawmidi_open(NULL, &midiout, portname, mode)) < 0) 
+    {
+        errormessage("Problem opening MIDI output: %s", snd_strerror(status));
+        exit(1);
+    }
 
     // open UART device file for read/write
     printf ("Opening %s...\n", SERIAL_PATH);
@@ -272,7 +291,7 @@ int main (void)
 
     // start main thread
     printf ("Starting read thread.\n");
-    read_midi_from_serial_port (seq);
+    read_midi_from_serial_port (midiout);
   
     return 0;  
 }
