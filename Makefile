@@ -2,8 +2,6 @@ all:
 	gcc src/ttymidi.c -o ttymidi -lasound
 debug:
 	gcc src/ttymidi.c -o ttymidi -g -lasound
-alsa:
-	gcc src/alsa-seq-test.c -o alsa-seq-test -g -lasound
 clean:
 	rm ttymidi
 install:
