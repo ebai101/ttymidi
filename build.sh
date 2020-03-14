@@ -1,17 +1,5 @@
 echo "syncing"
-rsync -ac --out-format="   %n" --no-t --delete-after . root@192.168.7.2:/root/ttymidi/
-
-case $1 in
-    all)
-        echo "make all"
-        ssh root@192.168.7.2 "make -C /root/ttymidi/ all"
-    ;;
-    debug)
-        echo "make debug"
-        ssh root@192.168.7.2 "make -C /root/ttymidi/ debug"
-    ;;
-    alsa)
-        echo "make alsa"
-        ssh root@192.168.7.2 "make -C /root/ttymidi/ alsa"
-    ;;
-esac
+rsync -ac --out-format="   %n" --no-t --delete-after --exclude ".vscode/" --exclude "ttymidi.code-workspace" --exclude "build.sh" . root@192.168.7.2:/root/ttymidi/
+MAKE_ARG=$1
+echo "make $MAKE_ARG"
+ssh root@192.168.7.2 "make -C /root/ttymidi/ $MAKE_ARG"
