@@ -1,0 +1,11 @@
+[Unit]
+Description=ttyMIDI
+
+[Service]
+Type=simple
+Restart=always
+User=root
+ExecStart=/root/ttymidi/ttymidi
+
+[Install]
+WantedBy=multi-user.target
