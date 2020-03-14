@@ -1,30 +1,30 @@
 /*
-    This file is part of ttymidi.
+ This file is part of ttymidi.
 
-    ttymidi is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+ ttymidi is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
 
-    ttymidi is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+ ttymidi is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with ttymidi.  If not, see <http://www.gnu.org/licenses/>.
+ You should have received a copy of the GNU General Public License
+ along with ttymidi. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <asm/ioctls.h>
-#include <asm/termbits.h>  
+#include <asm/termbits.h>
 #include <alsa/asoundlib.h>
-#include <fcntl.h>  
-#include <unistd.h>  
-#include <string.h>  
-#include <errno.h>  
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
 
 #define SERIAL_PATH "/dev/ttyS4"
 #define PRINTONLY 0
@@ -34,17 +34,15 @@
 int serial;
 int port_out_id;
 
-void errormessage(const char *format, ...)
-{
-   	va_list ap;
-   	va_start(ap, format);
-   	vfprintf(stderr, format, ap);
-   	va_end(ap);
-   	putc('\n', stderr);
+void errormessage(const char * format, ...) {
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+    putc('\n', stderr);
 }
 
-int setup_serial_port (const char path[], int speed)
-{
+int setup_serial_port(const char path[], int speed) {
     //Below is some new code for setting up serial comms which allows me
     //to use non-standard baud rates (such as 31250 for MIDI interface comms).
     //This code was provided in this thread:
@@ -54,128 +52,115 @@ int setup_serial_port (const char path[], int speed)
 
     int fd;
     struct termios2 tio;
-    
+
     // open device for read
-    fd = open (path, O_RDWR | O_NOCTTY | O_ASYNC);
-    
+    fd = open(path, O_RDWR | O_NOCTTY | O_ASYNC);
+
     //if can't open file
-    if (fd < 0)
-    {
+    if (fd < 0) {
         //show error and exit
-        perror (path);
+        perror(path);
         return (-1);
     }
-    
-    if (ioctl (fd, TCGETS2, &tio) < 0)
+
+    if (ioctl(fd, TCGETS2, & tio) < 0)
         perror("TCGETS2 ioctl");
-    
+
     tio.c_cflag &= ~CBAUD;
     tio.c_cflag |= BOTHER | CS8 | CLOCAL | CREAD; // Baud rate, 8N1, local modem, receive chars
-	tio.c_iflag = IGNPAR; // ignore parity errors
-	tio.c_oflag = 0; //	raw output
-	tio.c_lflag = 0; // non-canonical
-	tio.c_cc[VTIME] = 0; // don't use inter-char timer
-	tio.c_cc[VMIN] = 1; // block read until 1 char arrives
+    tio.c_iflag = IGNPAR; // ignore parity errors
+    tio.c_oflag = 0; //raw output
+    tio.c_lflag = 0; // non-canonical
+    tio.c_cc[VTIME] = 0; // don't use inter-char timer
+    tio.c_cc[VMIN] = 1; // block read until 1 char arrives
     tio.c_ispeed = speed;
     tio.c_ospeed = speed;
-    
-    if (ioctl (fd, TCSETS2, &tio) < 0)
+
+    if (ioctl(fd, TCSETS2, & tio) < 0)
         perror("TCSETS2 ioctl");
-    
+
     printf("%s speed set to %d baud\r\n", path, speed);
 
     return fd;
 }
 
-void read_midi_from_serial_port (snd_rawmidi_t *midiout) 
-{
-	char buf[3];
-	int i, status;
-	
-	/* Lets first fast forward to first status byte... */
-	if (PRINTONLY) {
-		do read(serial, buf, 1);
-		while (buf[0] >> 7 == 0);
-	}
+void read_midi_from_serial_port(snd_rawmidi_t * midiout) {
+    char buf[3];
+    int i, status;
 
-	while (1) 
-	{
-		/* 
-		 * super-debug mode: only print to screen whatever
-		 * comes through the serial port.
-		 */
+    /* Lets first fast forward to first status byte... */
+    if (PRINTONLY) {
+        do read(serial, buf, 1);
+        while (buf[0] >> 7 == 0);
+    }
 
-		if (PRINTONLY) 
-		{
-			read(serial, buf, 1);
-			printf("%x\t", (int) buf[0]&0xFF);
-			fflush(stdout);
-			continue;
-		}
+    while (1) {
+        /* 
+         * super-debug mode: only print to screen whatever
+         * comes through the serial port.
+         */
+
+        if (PRINTONLY) {
+            read(serial, buf, 1);
+            printf("%x\t", (int) buf[0] & 0xFF);
+            fflush(stdout);
+            continue;
+        }
 
         int i = 1;
-        while (i < 3)
-        {
-            read(serial, buf+i, 1);
+        while (i < 3) {
+            read(serial, buf + i, 1);
 
-			if (buf[i] >> 7 != 0)
-            {
-				// status byte
-				buf[0] = buf[i];
-				i = 1;
-			}
-            else
-            {
+            if (buf[i] >> 7 != 0) {
+                // status byte
+                buf[0] = buf[i];
+                i = 1;
+            } else {
                 // data byte
-                if (i == 2) {i = 3;}
-                else
-                {
+                if (i == 2) {
+                    i = 3;
+                } else {
                     // if the message type is program change or mono key pressure, it only uses 2 bytes
                     if ((buf[0] & 0xF0) == 0xC0 || (buf[0] & 0xF0) == 0xD0)
-						i = 3;
+                        i = 3;
                     else
-						i = 2;
+                        i = 2;
                 }
             }
         }
 
-		// write to hardware port
-		if ((status = snd_rawmidi_write (midiout, buf, 3)) < 0)
-        {
-			errormessage("Problem writing to MIDI output: %s", snd_strerror(status));
-        }
-        else
-        {
+        // write to hardware port
+        if ((status = snd_rawmidi_write(midiout, buf, 3)) < 0) {
+            errormessage("Problem writing to MIDI output: %s", snd_strerror(status));
+        } else {
             // if successful, print the MIDI message
-            printf ("0x%x %d %d\n", buf[0], buf[1], buf[2]);
+            printf("0x%x %d %d\n", buf[0], buf[1], buf[2]);
         }
-	}
+    }
 }
 
-int main (void)   
-{
-	int status;
-	int mode = SND_RAWMIDI_SYNC;
-	const char* portname = "hw:1,1,0";
+int main(void) {
+    int status;
+    int mode = SND_RAWMIDI_SYNC;
+    const char * portname = "hw:1,1,0";
 
     // setup sequencer 
-    printf ("Setting up MIDI...\n");
-    snd_rawmidi_t *midiout;
-    if ((status = snd_rawmidi_open(NULL, &midiout, portname, mode)) < 0) 
-    {
+    printf("Setting up MIDI...\n");
+    snd_rawmidi_t * midiout;
+    if ((status = snd_rawmidi_open(NULL, & midiout, portname, mode)) < 0) {
         errormessage("Problem opening MIDI output: %s", snd_strerror(status));
         exit(1);
     }
 
     // open UART device file for read/write
-    printf ("Opening %s...\n", SERIAL_PATH);
-    serial = setup_serial_port (SERIAL_PATH, 31250);
+    printf("Opening %s...\n", SERIAL_PATH);
+    serial = setup_serial_port(SERIAL_PATH, 31250);
 
-	if (PRINTONLY) printf ("Only printing serial messages.\n");
+    if (PRINTONLY) printf("Only printing serial messages.\n");
 
     // start main thread
-    printf ("Starting read thread.\n");
-    read_midi_from_serial_port (midiout);
-  
-    return 0;  
+    printf("Starting read thread.\n");
+    read_midi_from_serial_port(midiout);
+
+    return 0;
 }
