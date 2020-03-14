@@ -27,6 +27,7 @@
 #include <errno.h>
 
 #define SERIAL_PATH "/dev/ttyS4"
+#define MIDI_PORT "hw:1,1,0"
 #define PRINTONLY 0
 #define VERBOSE 1
 #define SILENT 0
@@ -142,7 +143,7 @@ void read_midi_from_serial_port(snd_rawmidi_t * midiout) {
 int main(void) {
     int status;
     int mode = SND_RAWMIDI_SYNC;
-    const char * portname = "hw:1,1,0";
+    const char * portname = MIDI_PORT;
 
     // setup sequencer 
     printf("Setting up MIDI...\n");
